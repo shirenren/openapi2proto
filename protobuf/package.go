@@ -17,6 +17,11 @@ func (p *Package) Children() []Type {
 	return p.children
 }
 
+// ClearChildren returns the child types associated with this type
+func (p *Package) ClearChildren() {
+	p.children = []Type{}
+}
+
 // Name returns the name of this type
 func (p *Package) Name() string {
 	return p.name

@@ -80,6 +80,26 @@ func (m *Message) Children() []Type {
 	return m.children
 }
 
+// ClearChildren returns the associated child types
+func (m *Message) ClearChildren() {
+	var newChild []Type
+	for _, item := range m.children {
+		switch item.(type) {
+		case *Enum:
+			continue
+		case *Message:
+			if item.Name() == "BodyMessage" {
+				newChild = append(newChild, item)
+			}
+			continue
+		default:
+			newChild = append(newChild, item)
+
+		}
+	}
+	m.children = newChild
+}
+
 // AddField adds Field objects to this message
 func (m *Message) AddField(f *Field) {
 	m.fields = append(m.fields, f)

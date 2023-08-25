@@ -4,12 +4,14 @@ package compiler // github.com/NYTimes/openapi2proto/compiler
 
 import (
 	"bytes"
+	"os"
 	"sort"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/NYTimes/openapi2proto/openapi"
 	"github.com/NYTimes/openapi2proto/protobuf"
-	"github.com/pkg/errors"
 )
 
 var builtinTypes = map[string]protobuf.Type{
@@ -45,8 +47,18 @@ func init() {
 }
 
 func newCompileCtx(spec *openapi.Spec, options ...Option) *compileCtx {
-	p := protobuf.NewPackage(packageName(spec.Info.Title))
-	svc := protobuf.NewService(normalizeServiceName(spec.Info.Title))
+	pName := packageName(spec.Info.Title)
+	if os.Getenv("PACKAGE") != "" {
+		pName = os.Getenv("PACKAGE")
+	}
+	sName := pName
+	if strings.Contains(sName, ".") {
+		slices := strings.Split(sName, ".")
+		sName = slices[len(slices)-1]
+	}
+
+	p := protobuf.NewPackage(pName)
+	svc := protobuf.NewService(normalizeServiceName(sName))
 	p.AddType(svc)
 
 	var annotate bool
@@ -96,9 +108,8 @@ func Compile(spec *openapi.Spec, options ...Option) (*protobuf.Package, error) {
 	c := newCompileCtx(spec, options...)
 	c.pushParent(c.pkg)
 
-	if c.annotate {
-		c.addImport("google/api/annotations.proto")
-	}
+	c.addImport("google/api/annotations.proto")
+	c.addImport("google/protobuf/descriptor.proto")
 
 	if err := c.compileGlobalOptions(spec.GlobalOptions); err != nil {
 		return nil, errors.Wrap(err, `failed to compile global options`)
@@ -319,10 +330,16 @@ func (c *compileCtx) compilePath(path string, p *openapi.Path) error {
 		}
 
 		endpointName := normalizeEndpointName(e)
+		if strings.HasPrefix(e.Description, "FunctionName:") {
+			endpointName = strings.TrimSpace(strings.Split(e.Description, ":")[1])
+			e.Description = ""
+		}
 		rpc := protobuf.NewRPC(endpointName)
 		if comment := extractComment(e); len(comment) > 0 {
 			rpc.SetComment(comment)
 		}
+		rpc.SetMethod(strings.ToLower(e.Verb))
+		rpc.SetUri(e.Path)
 
 		// protobuf Request and Response values must be created.
 		// Parameters are given as a list of schemas, but since protobuf

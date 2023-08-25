@@ -3,9 +3,9 @@ package protobuf
 // NewRPC creates a new RPC object
 func NewRPC(name string) *RPC {
 	return &RPC{
-		name: name,
+		name:      name,
 		parameter: emptyMessage,
-		response: emptyMessage,
+		response:  emptyMessage,
 	}
 }
 
@@ -47,4 +47,14 @@ func (r *RPC) SetComment(s string) {
 // AddOption adds rpc options to the RPC
 func (r *RPC) AddOption(v interface{}) {
 	r.options = append(r.options, v)
+}
+
+// SetMethod sets the response type
+func (r *RPC) SetMethod(m string) {
+	r.method = m
+}
+
+// SetUri sets the response type
+func (r *RPC) SetUri(m string) {
+	r.uri = m
 }
